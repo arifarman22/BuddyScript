@@ -1,4 +1,4 @@
-# Buddy Script — Social Feed Application
+Buddy Script — Social Feed Application
 
 A full-stack social media feed application built with **Next.js 14**, **Prisma ORM**, and **PostgreSQL (Neon)**. Features JWT-based authentication, post creation with image uploads, comments, replies, likes, and public/private post visibility.
 
@@ -301,5 +301,6 @@ npm start
 - **Separate like tables** — Avoids polymorphic queries; each table can be independently sharded if needed.
 - **Lazy comment loading** — Initial feed loads only 3 comments per post; full comments loaded on demand.
 - **Image uploads** — Stored on local filesystem; can be migrated to S3/CloudFront for production CDN delivery.
-#   B u d d y S c r i p t  
+#   B u d d y S c r i p t 
+ 
  
