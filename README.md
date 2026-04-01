@@ -1,6 +1,8 @@
-Buddy Script — Social Feed Application
+# Buddy Script — Social Feed Application
 
-A full-stack social media feed application built with **Next.js 14**, **Prisma ORM**, and **PostgreSQL (Neon)**. Features JWT-based authentication, post creation with image uploads, comments, replies, likes, and public/private post visibility.
+A full-stack social media feed application built with **Next.js 14**, **Prisma ORM**, and **PostgreSQL (Neon)**. Features JWT-based authentication, post creation with image uploads (Cloudinary), comments, replies, likes, and public/private post visibility.
+
+**Live Demo:** [Deployed on Vercel](https://buddy-script.vercel.app)
 
 ---
 
@@ -12,6 +14,7 @@ A full-stack social media feed application built with **Next.js 14**, **Prisma O
 - [Database Schema](#database-schema)
 - [API Reference](#api-reference)
 - [Getting Started](#getting-started)
+- [Deployment](#deployment)
 - [Environment Variables](#environment-variables)
 - [Design Decisions](#design-decisions)
 - [Security Considerations](#security-considerations)
@@ -44,15 +47,16 @@ A full-stack social media feed application built with **Next.js 14**, **Prisma O
 
 ## Tech Stack
 
-| Layer      | Technology                          |
-|------------|-------------------------------------|
-| Frontend   | Next.js 14 (App Router), React 18  |
-| Backend    | Next.js API Routes                  |
-| Database   | PostgreSQL (Neon Serverless)        |
-| ORM        | Prisma 5                            |
-| Auth       | JWT (jsonwebtoken) + bcryptjs       |
-| Styling    | Original CSS from provided design   |
-| File Upload| Local filesystem (`public/uploads`) |
+| Layer        | Technology                          |
+|--------------|-------------------------------------|
+| Frontend     | Next.js 14 (App Router), React 18  |
+| Backend      | Next.js API Routes                  |
+| Database     | PostgreSQL (Neon Serverless)        |
+| ORM          | Prisma 5                            |
+| Auth         | JWT (jsonwebtoken) + bcryptjs       |
+| Image Upload | Cloudinary                          |
+| Styling      | Original CSS from provided design   |
+| Deployment   | Vercel                              |
 
 ---
 
@@ -98,14 +102,14 @@ buddy-script/
 │   └── LikersModal.js             # Modal showing who liked
 ├── lib/
 │   ├── auth.js                     # JWT sign/verify/getAuthUser
+│   ├── cloudinary.js               # Cloudinary configuration
 │   └── prisma.js                   # Prisma client singleton
 ├── prisma/
 │   └── schema.prisma               # Database schema
 ├── public/
-│   ├── images/                     # Static assets (logo, shapes, etc.)
-│   └── uploads/                    # User-uploaded images
+│   └── images/                     # Static assets (logo, shapes, etc.)
 ├── middleware.js                    # Route protection
-├── .env                            # Environment variables
+├── .env                            # Environment variables (not committed)
 ├── .env.example                    # Env template
 ├── .gitignore
 ├── package.json
@@ -129,7 +133,7 @@ User
 Post
 ├── id (PK, cuid)
 ├── content
-├── imageUrl (nullable)
+├── imageUrl (nullable, Cloudinary URL)
 ├── visibility ("public" | "private")
 ├── createdAt (indexed DESC)
 └── authorId (FK → User, indexed)
@@ -215,19 +219,21 @@ All like tables use a **unique compound index** on (targetId, userId) to prevent
 ### Prerequisites
 - Node.js 18+
 - A [Neon](https://neon.tech) PostgreSQL database
+- A [Cloudinary](https://cloudinary.com) account (free tier)
 
 ### Installation
 
 ```bash
-# 1. Navigate to the project
-cd buddy-script
+# 1. Clone the repository
+git clone https://github.com/arifarman22/BuddyScript.git
+cd BuddyScript
 
 # 2. Install dependencies
 npm install
 
 # 3. Set up environment variables
 cp .env.example .env
-# Edit .env with your Neon connection string and JWT secret
+# Edit .env with your credentials (see Environment Variables section)
 
 # 4. Push database schema to Neon
 npx prisma db push
@@ -241,7 +247,24 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to the login page.
 
-### Production Build
+---
+
+## Deployment
+
+### Deploy to Vercel
+
+1. Push your code to GitHub
+2. Go to [vercel.com/new](https://vercel.com/new) and import your repository
+3. Add the required environment variables in **Settings → Environment Variables**:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+4. Deploy — Vercel auto-detects Next.js and runs `prisma generate` via the `postinstall` script
+5. Ensure your Neon database schema is pushed: `npx prisma db push`
+
+### Production Build (Self-hosted)
 
 ```bash
 npm run build
@@ -252,10 +275,15 @@ npm start
 
 ## Environment Variables
 
-| Variable       | Description                              | Example                                                              |
-|----------------|------------------------------------------|----------------------------------------------------------------------|
-| `DATABASE_URL` | Neon PostgreSQL connection string        | `postgresql://user:pass@host.neon.tech/neondb?sslmode=require`       |
-| `JWT_SECRET`   | Secret key for signing JWT tokens        | Any long random string                                               |
+| Variable                 | Description                              | Example                                                        |
+|--------------------------|------------------------------------------|----------------------------------------------------------------|
+| `DATABASE_URL`           | Neon PostgreSQL connection string        | `postgresql://user:pass@host.neon.tech/neondb?sslmode=require` |
+| `JWT_SECRET`             | Secret key for signing JWT tokens        | Any long random string                                         |
+| `CLOUDINARY_CLOUD_NAME`  | Cloudinary cloud name                    | `my-cloud`                                                     |
+| `CLOUDINARY_API_KEY`     | Cloudinary API key                       | `123456789012345`                                              |
+| `CLOUDINARY_API_SECRET`  | Cloudinary API secret                    | `abcdefghijklmnopqrstuvwx`                                     |
+
+> **Note:** Do not include `channel_binding=require` in your `DATABASE_URL` when deploying to Vercel — it can cause connection failures in serverless environments.
 
 ---
 
@@ -275,6 +303,8 @@ npm start
 
 7. **Initials-based avatars** — Instead of placeholder images, user avatars show initials (e.g., "JD" for John Doe) for a cleaner look without requiring profile picture uploads.
 
+8. **Cloudinary for image storage** — Images are uploaded to Cloudinary instead of the local filesystem, making the app compatible with serverless deployments (Vercel) where the filesystem is read-only.
+
 ---
 
 ## Security Considerations
@@ -289,6 +319,7 @@ npm start
 - **Private posts** — Only visible to the author; enforced at the database query level
 - **Unique constraints** — Prevent duplicate likes at the database level
 - **Cascade deletes** — Deleting a user removes all their posts, comments, likes
+- **No hardcoded secrets** — JWT secret is strictly loaded from environment variables
 
 ---
 
@@ -300,5 +331,4 @@ npm start
 - **Neon serverless PostgreSQL** — Auto-scales compute and storage. Connection pooling built-in.
 - **Separate like tables** — Avoids polymorphic queries; each table can be independently sharded if needed.
 - **Lazy comment loading** — Initial feed loads only 3 comments per post; full comments loaded on demand.
-- **Image uploads** — Stored on local filesystem; can be migrated to S3/CloudFront for production CDN delivery.
-#
+- **Cloudinary CDN** — Images served via Cloudinary's global CDN for fast delivery worldwide.
