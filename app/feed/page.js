@@ -18,7 +18,7 @@ export default function FeedPage() {
     fetch("/api/auth/me").then(r => r.json()).then(d => {
       if (!d.user) { router.push("/login"); return; }
       setUser(d.user);
-    });
+    }).catch(() => router.push("/login"));
   }, [router]);
 
   const loadPosts = useCallback(async (cursor) => {
@@ -26,7 +26,7 @@ export default function FeedPage() {
     const res = await fetch(url);
     if (!res.ok) return { posts: [], nextCursor: null };
     const data = await res.json();
-    return data;
+    return { posts: data.posts || [], nextCursor: data.nextCursor || null };
   }, []);
 
   useEffect(() => {
