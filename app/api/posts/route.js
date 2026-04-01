@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
-import { put } from "@vercel/blob";
+import cloudinary from "@/lib/cloudinary";
 
 export async function GET(req) {
   const auth = await getAuthUser();
@@ -77,10 +77,15 @@ export async function POST(req) {
 
   let imageUrl = null;
   if (image && image.size > 0) {
-    const ext = image.name.split(".").pop();
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const blob = await put(`uploads/${filename}`, image, { access: "public" });
-    imageUrl = blob.url;
+    const bytes = await image.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        { folder: "buddyscript" },
+        (error, result) => (error ? reject(error) : resolve(result))
+      ).end(buffer);
+    });
+    imageUrl = result.secure_url;
   }
 
   const post = await prisma.post.create({
